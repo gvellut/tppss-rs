@@ -98,6 +98,7 @@ impl DemSource {
 pub struct DemReader {
     reader: ObjectReader,
     ifd: ImageFileDirectory,
+    options: DemReaderOptions,
     width: usize,
     height: usize,
     tile_width: usize,
@@ -106,8 +107,31 @@ pub struct DemReader {
     ellipsoid: Ellipsoid,
 }
 
+/// Options controlling DEM read behavior.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct DemReaderOptions {
+    /// Number of tiles to request per `fetch_tiles` call.
+    ///
+    /// `None` fetches all tiles needed for a window in one batched request.
+    /// `Some(1)` approximates the older one-tile-at-a-time behavior.
+    pub tile_batch_size: Option<usize>,
+}
+
 impl DemReader {
     pub async fn open(source: impl AsRef<str>) -> Result<Self> {
+        Self::open_with_options(source, DemReaderOptions::default()).await
+    }
+
+    pub async fn open_with_options(
+        source: impl AsRef<str>,
+        options: DemReaderOptions,
+    ) -> Result<Self> {
+        if matches!(options.tile_batch_size, Some(0)) {
+            return Err(TppssError::InvalidInput(
+                "tile_batch_size must be greater than zero".into(),
+            ));
+        }
+
         let source = DemSource::parse(source);
         let (store, path) = open_object_store(source)?;
         let reader = ObjectReader::new(store, path);
@@ -144,6 +168,7 @@ impl DemReader {
             transform,
             ellipsoid,
             ifd,
+            options,
         })
     }
 
@@ -227,11 +252,22 @@ impl DemReader {
         let tile_x_end = (col_end - 1) / self.tile_width;
         let tile_y_start = row_start / self.tile_height;
         let tile_y_end = (row_end - 1) / self.tile_height;
-        let registry = DecoderRegistry::default();
-
+        let mut tile_coords =
+            Vec::with_capacity((tile_x_end - tile_x_start + 1) * (tile_y_end - tile_y_start + 1));
         for tile_y in tile_y_start..=tile_y_end {
             for tile_x in tile_x_start..=tile_x_end {
-                let tile = self.ifd.fetch_tile(tile_x, tile_y, &self.reader).await?;
+                tile_coords.push((tile_x, tile_y));
+            }
+        }
+
+        let registry = DecoderRegistry::default();
+        let batch_size = self.options.tile_batch_size.unwrap_or(tile_coords.len());
+
+        for batch in tile_coords.chunks(batch_size) {
+            let tiles = self.ifd.fetch_tiles(batch, &self.reader).await?;
+            for tile in tiles {
+                let tile_x = tile.x();
+                let tile_y = tile.y();
                 let array = tile.decode(&registry)?;
                 let shape = array.shape();
                 let tile_data = typed_array_to_f64(array.into_inner().0)?;

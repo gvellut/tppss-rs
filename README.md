@@ -60,9 +60,12 @@ GCS example:
 
 ```sh
 cargo run -p tppss-cli --features gcs -- day \
-  -m gs://data-mv6uxwxwxy2vz7k0/tppss/savoie/dem_wgs84_b.tif \
+  -m gs://data-mj3kvpi7h1xq3omdt49t39po/tppss/savoie/dem_wgs84_cog.tif \
   -j 2025-09-07 \
   -p "45.902351,6.144737" \
+  --distance 25 \
+  --angle-precision 1 \
+  -h 30 \
   -t Europe/Paris
 ```
 
@@ -86,6 +89,22 @@ cargo run -p tppss-cli -- year \
   -t Europe/Paris \
   -o ss2025.csv
 ```
+
+Remote COG read tuning:
+
+```sh
+cargo run -p tppss-cli --features gcs -- day \
+  -m gs://data-mj3kvpi7h1xq3omdt49t39po/tppss/savoie/dem_wgs84_cog.tif \
+  -j 2025-09-07 \
+  -p "45.902351,6.144737" \
+  --distance 25 \
+  --angle-precision 1 \
+  -h 30 \
+  -t Europe/Paris \
+  --tile-batch-size 64
+```
+
+Omitting `--tile-batch-size` is the optimized default: every tile required for one DEM window is requested in one batched `async-tiff` `fetch_tiles` call. `--tile-batch-size N` splits the required tiles into chunks of `N`; `--tile-batch-size 1` is useful for comparing against the older one-tile-at-a-time behavior.
 
 ## VS Code Code Signing in macOS for development
 
@@ -146,6 +165,8 @@ The CodeLLDB launch configs in `.vscode/launch.json` use those tasks through `pr
 ## GeoTIFF Support
 
 The current port supports single-band, tiled GeoTIFF/COG DEMs in a geographic CRS. Projected CRS inputs are rejected, matching the Python implementation for now. The reader uses GeoTIFF model pixel scale/tiepoint or model transformation metadata and resolves ellipsoid information from GeoTIFF keys, EPSG metadata, or WGS84 fallback for EPSG:4326/4979.
+
+The DEM reader batches all tiles needed by a window read by default. Library callers can use `DemReader::open_with_options` and `DemReaderOptions { tile_batch_size: Some(n) }` to split tile requests into smaller batches, or `None` to keep the single batched request default.
 
 For GCS, enable the `gcs` feature and use standard Google authentication supported by `object_store`, such as Application Default Credentials or service account environment variables. For S3, enable the `s3` feature and use standard AWS environment variables.
 

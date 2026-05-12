@@ -5,7 +5,7 @@ mod sunpos;
 mod tppss;
 mod types;
 
-pub use dem::{AffineTransform, DemReader, DemSource, Ellipsoid, StudyArea};
+pub use dem::{AffineTransform, DemReader, DemReaderOptions, DemSource, Ellipsoid, StudyArea};
 pub use error::{Result, TppssError};
 pub use horizon::{compute_horizon, compute_horizon_from_study_area};
 pub use sunpos::{SunPosition, sunpos};

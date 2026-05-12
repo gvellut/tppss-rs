@@ -2,7 +2,9 @@ use std::path::Path;
 
 use chrono::{NaiveDate, TimeZone};
 use chrono_tz::Europe::Paris;
-use tppss::{DemReader, KM, LatLon, SunriseSunset, compute_horizon, sunrise_sunset};
+use tppss::{
+    DemReader, DemReaderOptions, KM, LatLon, SunriseSunset, compute_horizon, sunrise_sunset,
+};
 
 const DEFAULT_DEM: &str = "/Users/guilhem/Documents/projects/dtm/dem_wgs84_b.tif";
 
@@ -52,5 +54,33 @@ async fn reference_day_matches_python_sunrise_and_sunset() -> anyhow::Result<()>
             sunset: Paris.with_ymd_and_hms(2025, 9, 7, 19, 51, 0).unwrap(),
         }
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn batched_and_single_tile_batch_match_reference_result() -> anyhow::Result<()> {
+    let Some(dem_path) = fixture_dem() else {
+        eprintln!("skipping DEM fixture test; set TPPSS_TEST_DEM to enable it");
+        return Ok(());
+    };
+
+    let latlon = LatLon::new(45.902351, 6.144737);
+    let day = NaiveDate::from_ymd_opt(2025, 9, 7).unwrap();
+
+    let batched_dem = DemReader::open(&dem_path).await?;
+    let batched_horizon = compute_horizon(latlon, &batched_dem, 25.0 * KM, 1, 30.0).await?;
+    let batched_result = sunrise_sunset(latlon, &batched_horizon, day, Paris, 60)?;
+
+    let single_tile_dem = DemReader::open_with_options(
+        &dem_path,
+        DemReaderOptions {
+            tile_batch_size: Some(1),
+        },
+    )
+    .await?;
+    let single_tile_horizon = compute_horizon(latlon, &single_tile_dem, 25.0 * KM, 1, 30.0).await?;
+    let single_tile_result = sunrise_sunset(latlon, &single_tile_horizon, day, Paris, 60)?;
+
+    assert_eq!(batched_result, single_tile_result);
     Ok(())
 }

@@ -7,8 +7,8 @@ use chrono::NaiveDate;
 use chrono_tz::Tz;
 use clap::{ArgAction, Parser, Subcommand};
 use tppss::{
-    DemReader, KM, LatLon, SunriseSunset, SunriseSunsetDetails, compute_horizon, sunrise_sunset,
-    sunrise_sunset_details, sunrise_sunset_year,
+    DemReader, DemReaderOptions, KM, LatLon, SunriseSunset, SunriseSunsetDetails, compute_horizon,
+    sunrise_sunset, sunrise_sunset_details, sunrise_sunset_year,
 };
 
 #[derive(Debug, Parser)]
@@ -69,6 +69,9 @@ struct DayArgs {
 
     #[arg(long = "time-precision", default_value_t = 60)]
     time_precision: usize,
+
+    #[arg(long = "tile-batch-size", value_parser = parse_positive_usize)]
+    tile_batch_size: Option<usize>,
 }
 
 #[derive(Debug, Parser)]
@@ -103,6 +106,9 @@ struct YearArgs {
 
     #[arg(long = "time-precision", default_value_t = 60)]
     time_precision: usize,
+
+    #[arg(long = "tile-batch-size", value_parser = parse_positive_usize)]
+    tile_batch_size: Option<usize>,
 }
 
 #[tokio::main]
@@ -119,7 +125,9 @@ async fn main() -> Result<()> {
 async fn run_day(args: DayArgs) -> Result<()> {
     let tz = get_tz_info(args.timezone.as_deref())?;
     println!("Compute horizon with DEM {}...", args.dem_filepath);
-    let dem = DemReader::open(&args.dem_filepath).await?;
+    let dem =
+        DemReader::open_with_options(&args.dem_filepath, dem_reader_options(args.tile_batch_size))
+            .await?;
     let horizon = compute_horizon(
         args.latlon,
         &dem,
@@ -169,7 +177,9 @@ async fn run_year(args: YearArgs) -> Result<()> {
 
     let tz = get_tz_info(args.timezone.as_deref())?;
     println!("Compute horizon...");
-    let dem = DemReader::open(&args.dem_filepath).await?;
+    let dem =
+        DemReader::open_with_options(&args.dem_filepath, dem_reader_options(args.tile_batch_size))
+            .await?;
     let horizon = compute_horizon(
         args.latlon,
         &dem,
@@ -248,6 +258,20 @@ fn parse_dem(value: &str) -> std::result::Result<String, String> {
     path.canonicalize()
         .map(|v| v.display().to_string())
         .map_err(|err| err.to_string())
+}
+
+fn parse_positive_usize(value: &str) -> std::result::Result<usize, String> {
+    let parsed = value
+        .parse::<usize>()
+        .map_err(|_| format!("{value:?} is not a positive integer"))?;
+    if parsed == 0 {
+        return Err(format!("{value:?} must be greater than zero"));
+    }
+    Ok(parsed)
+}
+
+fn dem_reader_options(tile_batch_size: Option<usize>) -> DemReaderOptions {
+    DemReaderOptions { tile_batch_size }
 }
 
 fn get_tz_info(timezone: Option<&str>) -> Result<Tz> {
