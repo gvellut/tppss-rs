@@ -87,6 +87,48 @@ cargo run -p tppss-cli -- year \
   -o ss2025.csv
 ```
 
+## VS Code Code Signing in macOS for development
+
+On macOS, debugging a rebuilt unsigned binary can repeatedly trigger privacy prompts when the CLI runs or reads DEMs from protected locations (such as `Documents`, `Downloads`, external volumes, or removable drives). The repository includes a VS Code setup that builds and signs the CLI before CodeLLDB launches it.
+
+The signing script is:
+
+```sh
+scripts/sign-built-product.sh
+```
+
+It builds the requested binary and signs it with the local signing identity from `SIGNING_IDENTITY`. If unset, it uses:
+
+```sh
+My Swift Dev Cert
+```
+
+See https://www.simplified.guide/macos/keychain-cert-code-signing-create on how to create a local dev cert.
+
+Manual debug build and sign:
+
+```sh
+./scripts/sign-built-product.sh tppss debug
+```
+
+Manual release build and sign:
+
+```sh
+./scripts/sign-built-product.sh tppss release
+```
+
+Use a different local certificate:
+
+```sh
+SIGNING_IDENTITY="Your Certificate Name" ./scripts/sign-built-product.sh tppss debug
+```
+
+The VS Code tasks in `.vscode/tasks.json` call the script:
+
+- `rust: Build Debug tppss CLI signed`
+
+The CodeLLDB launch configs in `.vscode/launch.json` use those tasks through `preLaunchTask`, then launch the signed binary directly from `target/debug/tppss` or `target/release/tppss`. Do not put a `cargo` block in these launch configs if you need signing; CodeLLDB would build and launch the binary before the script can sign it.
+
 ## GeoTIFF Support
 
 The current port supports single-band, tiled GeoTIFF/COG DEMs in a geographic CRS. Projected CRS inputs are rejected, matching the Python implementation for now. The reader uses GeoTIFF model pixel scale/tiepoint or model transformation metadata and resolves ellipsoid information from GeoTIFF keys, EPSG metadata, or WGS84 fallback for EPSG:4326/4979.
