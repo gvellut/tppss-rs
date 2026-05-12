@@ -1,0 +1,29 @@
+[workspace]
+members = ["crates/tppss", "crates/tppss-cli"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Guilhem Vellut <guilhem.vellut@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/gvellut/tppss-rs"
+
+[workspace.dependencies]
+anyhow = "1"
+async-tiff = { version = "0.3", features = ["ndarray", "object_store", "reqwest"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+chrono-tz = "0.10"
+clap = { version = "4.5", features = ["derive"] }
+epsg-utils = "0.0.2"
+futures = "0.3"
+iana-time-zone = "0.1"
+ndarray = "0.17"
+object_store = { version = "0.13", default-features = false, features = ["fs", "http"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1.43", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+url = "2.5"

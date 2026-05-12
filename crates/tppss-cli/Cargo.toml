@@ -1,0 +1,28 @@
+[package]
+name = "tppss-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command line interface for TPPSS"
+
+[[bin]]
+name = "tppss"
+path = "src/main.rs"
+
+[features]
+default = []
+gcs = ["tppss/gcs"]
+s3 = ["tppss/s3"]
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+clap.workspace = true
+iana-time-zone.workspace = true
+tppss = { path = "../tppss" }
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
