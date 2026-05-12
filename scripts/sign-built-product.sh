@@ -22,6 +22,7 @@ product_identifier() {
 build_product() {
     local product_name="$1"
     local configuration="${2:-debug}"
+    shift 2 || true
     local -a build_args=(build --package tppss-cli --bin "$product_name")
     local profile_dir="debug"
 
@@ -37,6 +38,10 @@ build_product() {
             ;;
     esac
 
+    if [[ $# -gt 0 ]]; then
+        build_args+=("$@")
+    fi
+
     cargo "${build_args[@]}"
 
     local target_dir="${CARGO_TARGET_DIR:-$ROOT_DIR/target}"
@@ -51,10 +56,11 @@ build_product() {
 sign_built_product() {
     local product_name="$1"
     local configuration="${2:-debug}"
+    shift 2 || true
     local identifier=""
     local codesign_output=""
 
-    build_product "$product_name" "$configuration"
+    build_product "$product_name" "$configuration" "$@"
     identifier="$(product_identifier "$product_name")"
 
     if ! codesign_output="$(
@@ -85,17 +91,29 @@ EOF
 
 usage() {
     cat >&2 <<'EOF'
-usage: scripts/sign-built-product.sh <product-name> [debug|release]
+usage: scripts/sign-built-product.sh <product-name> [debug|release] [cargo build args...]
+
+examples:
+  scripts/sign-built-product.sh tppss debug --features tppss/gcs,tppss-cli/gcs
+  scripts/sign-built-product.sh tppss release --features tppss/s3,tppss-cli/s3
 EOF
 }
 
 main() {
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
+    if [[ $# -lt 1 ]]; then
         usage
         exit 1
     fi
 
-    sign_built_product "$1" "${2:-debug}"
+    local product_name="$1"
+    local configuration="${2:-debug}"
+    if [[ $# -ge 2 ]]; then
+        shift 2
+    else
+        shift 1
+    fi
+
+    sign_built_product "$product_name" "$configuration" "$@"
 
     echo "Built and signed:"
     echo "  $EXECUTABLE_PATH"

@@ -117,6 +117,18 @@ Manual release build and sign:
 ./scripts/sign-built-product.sh tppss release
 ```
 
+Pass any additional Cargo build arguments after `debug` or `release`. For example, build and sign with GCS support:
+
+```sh
+./scripts/sign-built-product.sh tppss debug --features tppss/gcs,tppss-cli/gcs
+```
+
+Build and sign with S3 support:
+
+```sh
+./scripts/sign-built-product.sh tppss debug --features tppss/s3,tppss-cli/s3
+```
+
 Use a different local certificate:
 
 ```sh
@@ -126,6 +138,8 @@ SIGNING_IDENTITY="Your Certificate Name" ./scripts/sign-built-product.sh tppss d
 The VS Code tasks in `.vscode/tasks.json` call the script:
 
 - `rust: Build Debug tppss CLI signed`
+- `rust: Build Debug tppss CLI signed + GCS`
+- `rust: Build Debug tppss CLI signed + S3`
 
 The CodeLLDB launch configs in `.vscode/launch.json` use those tasks through `preLaunchTask`, then launch the signed binary directly from `target/debug/tppss` or `target/release/tppss`. Do not put a `cargo` block in these launch configs if you need signing; CodeLLDB would build and launch the binary before the script can sign it.
 
