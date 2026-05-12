@@ -13,11 +13,30 @@ The workspace contains:
 cargo build --workspace
 ```
 
+Release build:
+
+```sh
+cargo build --workspace --release
+```
+
+The CLI binary is written to:
+
+```sh
+target/release/tppss
+```
+
 Enable cloud object-store backends when needed:
 
 ```sh
 cargo build --workspace --features tppss/gcs,tppss-cli/gcs
 cargo build --workspace --features tppss/s3,tppss-cli/s3
+```
+
+Release builds with cloud object-store backends:
+
+```sh
+cargo build --workspace --release --features tppss/gcs,tppss-cli/gcs
+cargo build --workspace --release --features tppss/s3,tppss-cli/s3
 ```
 
 Remote DEMs should be tiled GeoTIFFs, preferably Cloud Optimized GeoTIFFs, so `async-tiff` can use range reads efficiently.
@@ -113,6 +132,7 @@ cargo test --workspace --all-features
 ## TODO
 
 - Add projected CRS support.
+- Support negative horizon elevation angles for observers on peaks instead of clamping them to zero.
 - Handle nodata more explicitly.
 - Add horizon/sun-course rendering examples.
 - Optimize horizon computation further.
