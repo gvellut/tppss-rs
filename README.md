@@ -1,6 +1,6 @@
 # tppss-rs
 
-Rust port of TPPSS, a tool for computing sunrise and sunset times while accounting for local topography from a DEM GeoTIFF.
+Rust port of my [TPPSS](https://github.com/gvellut/tppss) Python lib/cli, a tool for computing sunrise and sunset times while accounting for local topography from a DEM GeoTIFF.
 
 The workspace contains:
 
@@ -90,22 +90,6 @@ cargo run -p tppss-cli -- year \
   -o ss2025.csv
 ```
 
-Remote COG read tuning:
-
-```sh
-cargo run -p tppss-cli --features gcs -- day \
-  -m gs://data-mj3kvpi7h1xq3omdt49t39po/tppss/savoie/dem_wgs84_cog.tif \
-  -j 2025-09-07 \
-  -p "45.902351,6.144737" \
-  --distance 25 \
-  --angle-precision 1 \
-  -h 30 \
-  -t Europe/Paris \
-  --tile-batch-size 64
-```
-
-Omitting `--tile-batch-size` is the optimized default: every tile required for one DEM window is requested in one batched `async-tiff` `fetch_tiles` call. `--tile-batch-size N` splits the required tiles into chunks of `N`; `--tile-batch-size 1` is useful for comparing against the older one-tile-at-a-time behavior.
-
 ## VS Code Code Signing in macOS for development
 
 On macOS, debugging a rebuilt unsigned binary can repeatedly trigger privacy prompts when the CLI runs or reads DEMs from protected locations (such as `Documents`, `Downloads`, external volumes, or removable drives). The repository includes a VS Code setup that builds and signs the CLI before CodeLLDB launches it.
@@ -171,32 +155,6 @@ The DEM reader batches all tiles needed by a window read by default. Library cal
 For GCS, enable the `gcs` feature and use standard Google authentication supported by `object_store`, such as Application Default Credentials or service account environment variables. For S3, enable the `s3` feature and use standard AWS environment variables.
 
 ## Verification
-
-Reference fixtures from the Python implementation:
-
-```sh
-cargo run -p tppss-cli -- day \
-  -m /Users/guilhem/Documents/projects/dtm/dem_wgs84_b.tif \
-  -j 2026-01-07 \
-  -p "46.010148,6.112227" \
-  --distance 25 \
-  --angle-precision 1 \
-  -h 5 \
-  -t Europe/Paris
-# Night all day!
-```
-
-```sh
-cargo run -p tppss-cli -- day \
-  -m /Users/guilhem/Documents/projects/dtm/dem_wgs84_b.tif \
-  -j 2025-09-07 \
-  -p "45.902351,6.144737" \
-  --distance 25 \
-  --angle-precision 1 \
-  -h 30 \
-  -t Europe/Paris
-# Sunrise: 2025-09-07 08:32:00+02:00 / Sunset: 2025-09-07 19:51:00+02:00
-```
 
 Run checks:
 
